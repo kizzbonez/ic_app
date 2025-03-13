@@ -11,6 +11,10 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(cors({
+    origin: ['http://127.0.0.1:9292','https://italian-corners.myshopify.com'],
+    credentials: true
+}));
 
 // Shopify credentials
 const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
