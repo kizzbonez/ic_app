@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Product Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        input, textarea, button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .product-list {
+            margin-top: 20px;
+        }
+        .product-item {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" class="container">
+    <h2>Shopify Product Manager</h2>
+
+    <!-- User ID Input -->
+    <label>Enter Storefront User ID:</label>
+    <input type="text" v-model="storefront_user_id" placeholder="Enter your email">
+
+    <button @click="fetchProducts">View My Products</button>
+
+    <!-- Display Error -->
+    <p v-if="error" class="error">{{ error }}</p>
+
+    <!-- Product Form -->
+    <h3>Add New Product</h3>
+    <input type="text" v-model="newProduct.title" placeholder="Product Title">
+    <textarea v-model="newProduct.body_html" placeholder="Product Description"></textarea>
+    <input type="number" v-model="newProduct.price" placeholder="Price">
+    <input type="file" multiple @change="handleFileUpload">
+    <button @click="createProduct">Create Product</button>
+
+    <!-- Product List -->
+    <h3>Your Products</h3>
+    <div class="product-list">
+        <div v-for="product in products" :key="product.id" class="product-item">
+            <h4>{{ product.title }}</h4>
+            <p>{{ product.body_html }}</p>
+            <p><strong>Price:</strong> ${{ product.variants[0].price }}</p>
+            <img v-if="product.images.length > 0" :src="product.images[0].src" width="100">
+            <button @click="deleteProduct(product.id)">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            apiBaseUrl: "http://localhost:5000",  // Update with your backend API URL
+            storefront_user_id: "",
+            newProduct: {
+                title: "",
+                body_html: "",
+                price: "",
+                images: []
+            },
+            products: [],
+            error: "",
+            selectedFiles: []
+        },
+        methods: {
+            // Handle image selection
+            handleFileUpload(event) {
+                this.selectedFiles = event.target.files;
+            },
+
+            // Fetch user's products
+            async fetchProducts() {
+                if (!this.storefront_user_id) {
+                    this.error = "Please enter your storefront user ID!";
+                    return;
+                }
+                this.error = "";
+
+                try {
+                    const response = await axios.get(`${this.apiBaseUrl}/products/${this.storefront_user_id}`);
+                    this.products = response.data.products;
+                } catch (error) {
+                    this.error = "Failed to fetch products.";
+                }
+            },
+
+            // Create a new product
+            async createProduct() {
+                if (!this.storefront_user_id || !this.newProduct.title || !this.newProduct.price) {
+                    this.error = "Please fill all fields!";
+                    return;
+                }
+                this.error = "";
+
+                // Prepare FormData for file upload
+                let formData = new FormData();
+                formData.append("title", this.newProduct.title);
+                formData.append("body_html", this.newProduct.body_html);
+                formData.append("price", this.newProduct.price);
+                formData.append("storefront_user_id", this.storefront_user_id);
+
+                for (let i = 0; i < this.selectedFiles.length; i++) {
+                    formData.append("images", this.selectedFiles[i]);
+                }
+
+                try {
+                    const response = await axios.post(`${this.apiBaseUrl}/create-product`, formData, {
+                        headers: { "Content-Type": "multipart/form-data" }
+                    });
+
+                    // Refresh product list
+                    this.fetchProducts();
+                } catch (error) {
+                    this.error = "Error creating product.";
+                }
+            },
+
+            // Delete a product
+            async deleteProduct(productId) {
+                try {
+                    await axios.delete(`${this.apiBaseUrl}/remove-product/${productId}`, {
+                        data: { storefront_user_id: this.storefront_user_id }
+                    });
+
+                    // Refresh product list
+                    this.fetchProducts();
+                } catch (error) {
+                    this.error = "Failed to delete product.";
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
