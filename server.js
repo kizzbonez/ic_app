@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(cors({
-    origin: ['http://127.0.0.1:9292','https://italian-corners.myshopify.com'],
+    origin: ['http://127.0.0.1:9292','https://italian-corners.myshopify.com','http://localhost:9292'],
     credentials: true
 }));
 
